@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Lembrete de Remédios Seguro</title>
+	<style>
+		:root {
+			--primary: #2c3e50;
+			--accent: #3498db;
+			--danger: #e74c3c;
+			--success: #2ecc71;
+			--bg: #f4f7f6;
+		}
+		
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			background-color: var(--bg);
+			margin: 0;
+			padding: 20px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+		
+		.container {
+			max-width: 600px;
+			width: 100%;
+			background: white;
+			padding: 25px;
+			border-radius: 15px;
+			box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+		}
+		
+		h1 { color: var(--primary); text-align: center; }
+		
+		/* Formulário */
+		.form-group { margin-bottom: 15px; }
+		label { display: block; margin-bottom: 5px; font-weight: bold; }
+		input, select {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid #ddd;
+			border-radius: 8px;
+			box-sizing: border-box;
+		}
+		
+		button {
+			width: 100%;
+			padding: 12px;
+			background-color: var(--success);
+			color: white;
+			border: none;
+			border-radius: 8px;
+			font-size: 16px;
+			cursor: pointer;
+			transition: 0.3s
+		}
+		button:hover { background-color: #27ae60; }
+
+        /* Lista de Remédios */
+        .remedios-lista { margin-top: 30px; }
+        .card {
+            background: #fff;
+            border-left: 5px solid var(--accent);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .card img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+
+        .card-info { flex-grow: 1; }
+        .card-info h3 { margin: 0; font-size: 18px; }
+        .perfil-tag {
+            font-size: 12px;
+            background: #eee;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* Alerta visual */
+        #alerta-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            text-align: center;
+        }
+
+        #alerta-overlay img { max-width: 200px; border-radius: 20px; margin: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>💊 Meus Remédios</h1>
+    
+    <div class="form-group">
+        <label>Nome do Remédio:</label>
+        <input type="text" id="nome" placeholder="Ex: Paracetamol">
+    </div>
+
+    <div class="form-group">
+        <label>Perfil:</label>
+        <select id="perfil">
+            <option value="Idoso">👴 Idoso</option>
+            <option value="Adulto">👨 Adulto</option>
+            <option value="Criança">🧒 Criança</option>
+            <option value="Gestante">🤰 Gestante</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Horário:</label>
+        <input type="time" id="horario">
+    </div>
+
+    <div class="form-group">
+        <label>Foto do Remédio:</label>
+        <input type="file" id="foto" accept="image/*">
+    </div>
+
+    <button onclick="adicionarRemedio()">Adicionar Lembrete</button>
+
+    <div class="remedios-lista" id="lista">
+        </div>
+</div>
+
+<div id="alerta-overlay">
+    <h1 style="color: #ff4d4d;">⚠️ HORA DO REMÉDIO!</h1>
+    <h2 id="alerta-nome"></h2>
+    <div id="alerta-img-container"></div>
+    <p id="alerta-perfil"></p>
+    <button onclick="fecharAlerta()" style="width: 200px; background: var(--accent);">Tomei o Remédio</button>
+</div>
+
+<script>
+    let listaRemedios = [];
+
+    function adicionarRemedio() {
+        const nome = document.getElementById('nome').value;
+        const perfil = document.getElementById('perfil').value;
+        const horario = document.getElementById('horario').value;
+        const fotoInput = document.getElementById('foto');
+
+        if(!nome || !horario) {
+            alert("Por favor, preencha o nome e o horário.");
+            return;
+        }
+
+        const leitor = new FileReader();
+        leitor.onload = function(e) {
+            const novoRemedio = {
+                id: Date.now(),
+                nome,
+                perfil,
+                horario,
+                imagem: e.target.result || 'https://via.placeholder.com/60'
+            };
+
+            listaRemedios.push(novoRemedio);
+            renderizarLista();
+            limparCampos();
+        };
+
+        if (fotoInput.files[0]) {
+            leitor.readAsDataURL(fotoInput.files[0]);
+        } else {
+            leitor.onload({ target: { result: null } });
+        }
+    }
+
+    function renderizarLista() {
+        const divLista = document.getElementById('lista');
+        divLista.innerHTML = "<h3>Lembretes Ativos:</h3>";
+
+        listaRemedios.forEach(r => {
+            divLista.innerHTML += `
+                <div class="card">
+                    <img src="${r.imagem}" alt="remedio">
+                    <div class="card-info">
+                        <h3>${r.nome}</h3>
+                        <span class="perfil-tag">${r.perfil}</span>
+                    </div>
+                    <div style="font-weight: bold; color: var(--accent);">${r.horario}</div>
+                </div>
+            `;
+        });
+    }
+
+    function limparCampos() {
+        document.getElementById('nome').value = '';
+        document.getElementById('horario').value = '';
+        document.getElementById('foto').value = '';
+    }
+
+    // Sistema de Verificação de Horário
+    setInterval(() => {
+        const agora = new Date();
+        const horaAtual = agora.getHours().toString().padStart(2, '0') + ":" + 
+                         agora.getMinutes().toString().padStart(2, '0');
+
+        listaRemedios.forEach(r => {
+            if (r.horario === horaAtual) {
+                dispararAlerta(r);
+            }
+        });
+    }, 1000 * 30); // Verifica a cada 30 segundos
+
+    function dispararAlerta(remedio) {
+        document.getElementById('alerta-nome').innerText = remedio.nome;
+        document.getElementById('alerta-perfil').innerText = "Perfil: " + remedio.perfil;
+        document.getElementById('alerta-img-container').innerHTML = `<img src="${remedio.imagem}">`;
+        document.getElementById('alerta-overlay').style.display = 'flex';
+        
+        // Som de alerta básico
+        const beep = new AudioContext();
+        const osc = beep.createOscillator();
+        osc.connect(beep.destination);
+        osc.start();
+        osc.stop(beep.currentTime + 1);
+    }
+
+    function fecharAlerta() {
+        document.getElementById('alerta-overlay').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
